@@ -1,0 +1,38 @@
+# deb_deploy
+
+deb_deploy is a capistrano plugin to facilitate the deployment of debian packages (inspired by supply_drop). It works by simply SCP your debian packages to your servers and installing them through the package manager
+
+### Installation
+
+    gem install deb_deploy
+
+or with Bundler
+
+    gem 'deb_deploy'
+
+### Tasks
+
+    cap deb:deploy
+
+This deploys the debian packages and does a simple apt-get install of on the target servers.
+
+### Configuration
+
+At the top of your deploy.rb
+
+    require 'rubygems'
+    require 'deb_deploy'
+
+then optionally set some variables
+
+    set :debian_source, '.'
+
+the directory containing your debian packages that will be rsynced to the servers.
+
+  	set :debian_target, '/tmp/deb_deploy'
+
+the temp directory on the target machine to hold the packages before installing.
+
+  	set :debian_stream_log, false
+
+determines whether to stream the command output.
