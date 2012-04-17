@@ -1,4 +1,4 @@
-require 'deb_deploy/scp'
+require 'deb_deploy/rsync'
 require 'deb_deploy/logger/batch'
 require 'deb_deploy/logger/stream'
 
