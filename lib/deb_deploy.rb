@@ -44,6 +44,7 @@ Capistrano::Configuration.instance.load do
 
   	desc "copies and installs debian packages to the server"
   	task :deploy do
+  		run "mkdir -p #{debian_target}"
   		copy_packages
   		install_packages
   	end
