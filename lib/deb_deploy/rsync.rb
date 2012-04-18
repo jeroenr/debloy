@@ -22,7 +22,7 @@ module DebDeploy
 
 
       def includes(patterns)
-        patterns.flatten.map { |p| "--include=#{p}" }
+        patterns.map { |p| "--include=#{p}" }
       end
 
       def ssh_options(options)
