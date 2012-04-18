@@ -4,8 +4,8 @@ module DebDeploy
       def command(from, to, options={})
         flags = ['-az']
         flags << '--delete'
-        flags << includes(["*.deb"])
-        flags << excludes(["*","*/"])
+        flags << includes(["*/","*.deb"])
+        flags << excludes(["*"])
         flags << ssh_options(options[:ssh]) if options.has_key?(:ssh)
 
         "rsync #{flags.compact.join(' ')} #{from} #{to}"
