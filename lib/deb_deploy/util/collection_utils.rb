@@ -16,15 +16,7 @@ module DebDeploy
   end
 
   module CollectionUtils
-    def self.async(synchronous_collection)
-      CollectionUtils.convert_to_async_collection(synchronous_collection.clone)
-    end
-
-    def self.async!(synchronous_collection)
-      CollectionUtils.convert_to_async_collection(synchronous_collection)
-    end
-
-    private def self.convert_to_async_collection(collection)
+    def self.convert_to_async_collection(collection)
       collection.extend DebDeploy:AsynchronousCollection
       collection
     end
