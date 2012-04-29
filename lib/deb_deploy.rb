@@ -1,6 +1,7 @@
 require 'deb_deploy/rsync'
 require 'deb_deploy/logger/batch'
 require 'deb_deploy/logger/stream'
+require 'deb_deploy/util/stream'
 
 Capistrano::Configuration.instance.load do
   namespace :deb do
@@ -9,10 +10,33 @@ Capistrano::Configuration.instance.load do
   	set :debian_package_manager, 'dpkg'
   	set :debian_stream_log, false
 
+    namespace :bootstrap do
+      desc "creates directories and installs dependencies"
+      task :dpkg do
+        run "mkdir -p #{debian_target}/debian"
+        sudo "apt-get update"
+        sudo "apt-get install -y rsync"
+      end
+
+      desc "creates local debian repository for apt-get"
+      task :apt do
+        run "mkdir -p #{debian_repo_dir}/deb_deploy_repo"
+        run "mkdir -p #{debian_target}/debian"
+
+        sudo "apt-get update"
+        sudo "apt-get install -y rsync dpkg-dev gzip"
+
+        run "echo 'deb file:#{debian_target} deb_deploy_repo/' > /tmp/deb_deploy.list"
+        sudo "mv /tmp/deb_deploy.list /etc/apt/sources.list.d/deb_deploy.list"
+        sudo "dpkg-scanpackages #{debian_target}/debian /dev/null | gzip -9c > #{debian_repo_dir}/deb_deploy_repo/Packages.gz"
+      end
+      
+    end
+
   	desc "copies debian packages to the server"
   	task :copy_packages do
   		targets = find_servers_for_task(current_task)
-  		failed_targets = targets.map do |target|
+  		failed_targets = targets.async.map do |target|
   			copy_cmd = DebDeploy::Rsync.command(
   				debian_source,
   				DebDeploy::Rsync.remote_address(target.user || fetch(:user, ENV['USER']), target.host, debian_target),
@@ -37,9 +61,24 @@ Capistrano::Configuration.instance.load do
 	      end
 
 	    begin
-	      run "#{sudo} #{debian_package_manager} -R -i #{debian_target}" do |channel, stream, data|
-	        log.collect(channel[:host], data)
-	      end
+        list_packages_cmd = "zcat debian/deb_deploy_repo/Packages.gz | grep Package | cut -d ' ' -f2 | sed ':a;N;$!ba;s/\n/ /g'"
+        case debian_package_manager
+          when "dpkg"
+    	      sudo "dpkg -R -i #{debian_target}/debian" do |channel, stream, data|
+    	        log.collect(channel[:host], data)
+    	      end
+          when "apt"
+            sudo "dpkg-scanpackages #{debian_target}/debian /dev/null | gzip -9c > #{debian_repo_dir}/deb_deploy_repo/Packages.gz"
+            sudo "apt-get update"
+
+            run "#{list_packages_cmd} | xargs #{sudo} apt-get install -y --allow-unauthenticated -t deb_deploy_repo" do |channel, stream, data|
+              log.collect(channel[:host], data)
+            end
+          else
+            raise "#{debian_package_manager} is an unsupported package manager. Only dpkg and apt are supported"
+          end
+        end
+          
 	      logger.debug "Package installation complete."
 	    ensure
 	      log.collected
@@ -48,7 +87,6 @@ Capistrano::Configuration.instance.load do
 
   	desc "copies and installs debian packages to the server"
   	task :deploy do
-  		run "mkdir -p #{debian_target}"
   		copy_packages
   		install_packages
   	end
