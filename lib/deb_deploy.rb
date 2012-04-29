@@ -13,22 +13,21 @@ Capistrano::Configuration.instance.load do
     namespace :bootstrap do
       desc "creates directories and installs dependencies"
       task :dpkg do
-        run "mkdir -p #{debian_target}/debian"
+        run "mkdir -p #{debian_target}"
         sudo "apt-get update"
         sudo "apt-get install -y rsync"
       end
 
       desc "creates local debian repository for apt-get"
       task :apt do
-        run "mkdir -p #{debian_repo_dir}/deb_deploy_repo"
-        run "mkdir -p #{debian_target}/debian"
+        run "mkdir -p #{debian_target}"
 
         sudo "apt-get update"
         sudo "apt-get install -y rsync dpkg-dev gzip"
 
-        run "echo 'deb file:#{debian_target} deb_deploy_repo/' > /tmp/deb_deploy.list"
+        run "echo 'deb file:#{debian_target} ./' > /tmp/deb_deploy.list"
         sudo "mv /tmp/deb_deploy.list /etc/apt/sources.list.d/deb_deploy.list"
-        sudo "dpkg-scanpackages #{debian_target}/debian /dev/null | gzip -9c > #{debian_repo_dir}/deb_deploy_repo/Packages.gz"
+        sudo "dpkg-scanpackages #{debian_target} /dev/null | gzip -9c > #{debian_target}/Packages.gz"
       end
       
     end
@@ -61,17 +60,17 @@ Capistrano::Configuration.instance.load do
 	      end
 
 	    begin
-        list_packages_cmd = "zcat debian/deb_deploy_repo/Packages.gz | grep Package | cut -d ' ' -f2 | sed ':a;N;$!ba;s/\n/ /g'"
+        list_packages_cmd = "zcat #{debian_target}/Packages.gz | grep Package | cut -d ' ' -f2 | sed ':a;N;$!ba;s/\n/ /g'"
         case debian_package_manager
           when "dpkg"
-    	      sudo "dpkg -R -i #{debian_target}/debian" do |channel, stream, data|
+    	      sudo "dpkg -R -i #{debian_target}" do |channel, stream, data|
     	        log.collect(channel[:host], data)
     	      end
           when "apt"
-            sudo "dpkg-scanpackages #{debian_target}/debian /dev/null | gzip -9c > #{debian_repo_dir}/deb_deploy_repo/Packages.gz"
+            sudo "dpkg-scanpackages #{debian_target} /dev/null | gzip -9c > #{debian_target}/Packages.gz"
             sudo "apt-get update"
 
-            run "#{list_packages_cmd} | xargs #{sudo} apt-get install -y --allow-unauthenticated -t deb_deploy_repo" do |channel, stream, data|
+            run "#{list_packages_cmd} | xargs #{sudo} apt-get install -y --allow-unauthenticated" do |channel, stream, data|
               log.collect(channel[:host], data)
             end
           else
