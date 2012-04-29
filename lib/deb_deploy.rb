@@ -16,6 +16,7 @@ Capistrano::Configuration.instance.load do
         run "mkdir -p #{debian_target}"
         sudo "apt-get update"
         sudo "apt-get install -y rsync"
+        logger.debug "Dependencies installed"
       end
 
       desc "creates local debian repository for apt-get"
@@ -25,9 +26,12 @@ Capistrano::Configuration.instance.load do
         sudo "apt-get update"
         sudo "apt-get install -y rsync dpkg-dev gzip"
 
-        run "echo 'deb file:#{debian_target} ./' > /tmp/deb_deploy.list"
-        sudo "mv /tmp/deb_deploy.list /etc/apt/sources.list.d/deb_deploy.list"
-        sudo "dpkg-scanpackages #{debian_target} /dev/null | gzip -9c > #{debian_target}/Packages.gz"
+        logger.debug "Dependencies installed"
+
+        run "echo 'deb file:#{debian_target} ./' > #{debian_target}/deb_deploy.list"
+        sudo "mv #{debian_target}/deb_deploy.list /etc/apt/sources.list.d/deb_deploy.list"
+
+        logger.debug "Set up local debian repository"
       end
       
     end
@@ -70,7 +74,7 @@ Capistrano::Configuration.instance.load do
             sudo "dpkg-scanpackages #{debian_target} /dev/null | gzip -9c > #{debian_target}/Packages.gz"
             sudo "apt-get update"
 
-            run "#{list_packages_cmd} | xargs #{sudo} apt-get install -y --allow-unauthenticated" do |channel, stream, data|
+            run "#{list_packages_cmd} | xargs #{sudo} apt-get -y --allow-unauthenticated install" do |channel, stream, data|
               log.collect(channel[:host], data)
             end
           else
