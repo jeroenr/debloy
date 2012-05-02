@@ -1,7 +1,6 @@
 require 'deb_deploy/rsync'
 require 'deb_deploy/logger/batch'
 require 'deb_deploy/logger/stream'
-require 'deb_deploy/util/stream'
 
 Capistrano::Configuration.instance.load do
   namespace :deb do
@@ -79,7 +78,6 @@ Capistrano::Configuration.instance.load do
             end
           else
             raise "#{debian_package_manager} is an unsupported package manager. Only dpkg and apt are supported"
-          end
         end
           
 	      logger.debug "Package installation complete."
