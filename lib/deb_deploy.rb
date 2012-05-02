@@ -10,6 +10,17 @@ Capistrano::Configuration.instance.load do
   	set :debian_stream_log, false
 
     namespace :bootstrap do
+      task :default do
+        case debian_package_manager
+          when "dpkg"
+		dpkg
+          when "apt"
+		apt
+          else
+            raise "#{debian_package_manager} is an unsupported package manager. Only dpkg and apt are supported"
+        end
+      end
+     
       desc "creates directories and installs dependencies"
       task :dpkg do
         run "mkdir -p #{debian_target}"
