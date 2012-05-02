@@ -10,6 +10,7 @@ Capistrano::Configuration.instance.load do
   	set :debian_stream_log, false
 
     namespace :bootstrap do
+      desc "prepares remote hosts for debian deployment based on selected package manager (dpkg or apt)"
       task :default do
         case debian_package_manager
           when "dpkg"
