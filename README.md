@@ -33,6 +33,10 @@ the directory containing your debian packages that will be rsynced to the server
 
 the temp directory on the target machine to hold the packages before installing.
 
+ 	set :debian_package_manager, 'dpkg'
+
+the debian package manager to use (one of [dpkg, apt]).
+
   	set :debian_stream_log, false
 
 determines whether to stream the command output.
