@@ -82,7 +82,7 @@ Capistrano::Configuration.instance.load do
     	        log.collect(channel[:host], data)
     	      end
           when "apt"
-            sudo "dpkg-scanpackages #{debian_target} /dev/null | gzip -9c > #{debian_target}/Packages.gz"
+            run "cd #{debian_target} && #{sudo} dpkg-scanpackages . /dev/null | gzip -9c > #{debian_target}/Packages.gz"
             sudo "apt-get update"
 
             run "#{list_packages_cmd} | xargs #{sudo} apt-get -y --allow-unauthenticated install" do |channel, stream, data|
