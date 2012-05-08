@@ -84,7 +84,16 @@ Capistrano::Configuration.instance.load do
           when "apt"
             run "cd #{debian_target} && apt-ftparchive packages .  | gzip -9c > Packages.gz"
 
-            run "cd #{debian_target} && apt-ftparchive " << {"Codename" => "deb_deploy", "Components" => "deb_deploy", "Origin" => "deb_deploy", "Label" => "Deployed with deb_deploy", "Architectures" => "all", "Suite" => "stable"}.map{|k,v| "-o APT::FTPArchive::Release::#{k}='#{v}'"}.join(' ') << " release . > Release"
+            release_file_options = {
+              "Codename" => "deb_deploy", 
+              "Components" => "deb_deploy", 
+              "Origin" => "deb_deploy", 
+              "Label" => "Deployed with deb_deploy", 
+              "Architectures" => "all", 
+              "Suite" => "stable"
+            }
+            
+            run "cd #{debian_target} && apt-ftparchive " << release_file_options.map{|k,v| "-o APT::FTPArchive::Release::#{k}='#{v}'"}.join(' ') << " release . > Release"
 
             sudo "apt-get update"
 
