@@ -75,7 +75,6 @@ Capistrano::Configuration.instance.load do
 	      end
 
 	    begin
-        list_packages_cmd = "zcat #{debian_target}/Packages.gz | grep Package | cut -d ' ' -f2 | sed ':a;N;$!ba;s/\n/ /g'"
         case debian_package_manager
           when "dpkg"
     	      sudo "dpkg -R -i #{debian_target}" do |channel, stream, data|
@@ -92,11 +91,13 @@ Capistrano::Configuration.instance.load do
               "Architectures" => "all", 
               "Suite" => "stable"
             }
-            
+
             run "cd #{debian_target} && apt-ftparchive " << release_file_options.map{|k,v| "-o APT::FTPArchive::Release::#{k}='#{v}'"}.join(' ') << " release . > Release"
 
             sudo "apt-get update"
 
+            list_packages_cmd = "zcat #{debian_target}/Packages.gz | grep Package | cut -d ' ' -f2 | sed ':a;N;$!ba;s/\n/ /g'"
+            
             run "#{list_packages_cmd} | xargs #{sudo} apt-get -y --allow-unauthenticated install" do |channel, stream, data|
               log.collect(channel[:host], data)
             end
