@@ -14,9 +14,9 @@ Capistrano::Configuration.instance.load do
       task :default do
         case debian_package_manager
           when "dpkg"
-		dpkg
+		        dpkg
           when "apt"
-		apt
+		        apt
           else
             raise "#{debian_package_manager} is an unsupported package manager. Only dpkg and apt are supported"
         end
@@ -69,9 +69,9 @@ Capistrano::Configuration.instance.load do
 
     task :install_packages do
     	log = if debian_stream_log 
-		DebDeploy::Logger::Stream.new(logger) 
+		      DebDeploy::Logger::Stream.new(logger) 
 	      else 
-		DebDeploy::Logger::Batch.new(logger) 
+		      DebDeploy::Logger::Batch.new(logger) 
 	      end
 
 	    begin
@@ -82,7 +82,10 @@ Capistrano::Configuration.instance.load do
     	        log.collect(channel[:host], data)
     	      end
           when "apt"
-            run "cd #{debian_target} && #{sudo} dpkg-scanpackages . /dev/null | gzip -9c > #{debian_target}/Packages.gz"
+            run "cd #{debian_target} && apt-ftparchive packages .  | gzip -9c > Packages.gz"
+
+            run "cd #{debian_target} && apt-ftparchive " << {"Codename" => "deb_deploy", "Components" => "deb_deploy", "Origin" => "deb_deploy", "Label" => "Deployed with deb_deploy", "Architectures" => "all", "Suite" => "stable"}.map{|k,v| "-o APT::FTPArchive::Release::#{k}='#{v}'"}.join(' ') << " release . > Release"
+
             sudo "apt-get update"
 
             run "#{list_packages_cmd} | xargs #{sudo} apt-get -y --allow-unauthenticated install" do |channel, stream, data|
