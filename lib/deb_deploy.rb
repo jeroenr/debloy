@@ -14,9 +14,9 @@ Capistrano::Configuration.instance.load do
       task :default do
         case debian_package_manager
           when "dpkg"
-		dpkg
+		        dpkg
           when "apt"
-		apt
+		        apt
           else
             raise "#{debian_package_manager} is an unsupported package manager. Only dpkg and apt are supported"
         end
@@ -69,22 +69,35 @@ Capistrano::Configuration.instance.load do
 
     task :install_packages do
     	log = if debian_stream_log 
-		DebDeploy::Logger::Stream.new(logger) 
+		      DebDeploy::Logger::Stream.new(logger) 
 	      else 
-		DebDeploy::Logger::Batch.new(logger) 
+		      DebDeploy::Logger::Batch.new(logger) 
 	      end
 
 	    begin
-        list_packages_cmd = "zcat #{debian_target}/Packages.gz | grep Package | cut -d ' ' -f2 | sed ':a;N;$!ba;s/\n/ /g'"
         case debian_package_manager
           when "dpkg"
     	      sudo "dpkg -R -i #{debian_target}" do |channel, stream, data|
     	        log.collect(channel[:host], data)
     	      end
           when "apt"
-            run "cd #{debian_target} && #{sudo} dpkg-scanpackages . /dev/null | gzip -9c > #{debian_target}/Packages.gz"
+            run "cd #{debian_target} && apt-ftparchive packages .  | gzip -9c > Packages.gz"
+
+            release_file_options = {
+              "Codename" => "deb_deploy", 
+              "Components" => "deb_deploy", 
+              "Origin" => "deb_deploy", 
+              "Label" => "Deployed with deb_deploy", 
+              "Architectures" => "all", 
+              "Suite" => "stable"
+            }
+
+            run "cd #{debian_target} && apt-ftparchive " << release_file_options.map{|k,v| "-o APT::FTPArchive::Release::#{k}='#{v}'"}.join(' ') << " release . > Release"
+
             sudo "apt-get update"
 
+            list_packages_cmd = "zcat #{debian_target}/Packages.gz | grep Package | cut -d ' ' -f2 | sed ':a;N;$!ba;s/\n/ /g'"
+            
             run "#{list_packages_cmd} | xargs #{sudo} apt-get -y --allow-unauthenticated install" do |channel, stream, data|
               log.collect(channel[:host], data)
             end
