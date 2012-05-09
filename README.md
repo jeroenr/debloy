@@ -20,6 +20,10 @@ This sets up the environment for dpkg or apt deployment, depending on your confi
 
 This deploys the debian packages on the target servers.
 
+    cap deb:teardown
+
+Cleans up the environment.
+
 ### Configuration
 
 At the top of your deploy.rb
