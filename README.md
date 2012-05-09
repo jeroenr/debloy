@@ -45,6 +45,6 @@ the debian package manager to use (one of [dpkg, apt]).
 
 determines whether to stream the command output.
 	
-	set :debian_filter, ['*.deb']
+	set :debian_filter, ['*']
 
 a glob syntax filter to determine which packages to deploy. By default all will be deployed.
