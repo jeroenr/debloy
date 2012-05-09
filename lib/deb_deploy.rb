@@ -14,13 +14,18 @@ Capistrano::Configuration.instance.load do
     namespace :bootstrap do
       desc "prepares remote hosts for debian deployment based on selected package manager (dpkg or apt)"
       task :default do
-        case debian_package_manager
-          when "dpkg"
-		        dpkg
-          when "apt"
-		        apt
-          else
-            raise "#{debian_package_manager} is an unsupported package manager. Only dpkg and apt are supported"
+        transaction do
+          on_rollback do
+            teardown
+          end
+          case debian_package_manager
+            when "dpkg"
+  		        dpkg
+            when "apt"
+  		        apt
+            else
+              raise "#{debian_package_manager} is an unsupported package manager. Only dpkg and apt are supported"
+          end
         end
       end
      
