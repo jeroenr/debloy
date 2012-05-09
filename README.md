@@ -40,3 +40,7 @@ the debian package manager to use (one of [dpkg, apt]).
   	set :debian_stream_log, false
 
 determines whether to stream the command output.
+	
+	set :debian_filter, ['*.deb']
+
+a glob syntax filter to determine which packages to deploy. By default all will be deployed.

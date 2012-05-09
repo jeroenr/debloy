@@ -11,6 +11,7 @@ Capistrano::Configuration.instance.load do
   	set :debian_target, '/tmp/deb_deploy'
   	set :debian_package_manager, 'dpkg'
   	set :debian_stream_log, false
+    set :debian_filter, ['*.deb']
 
     namespace :bootstrap do
       desc "prepares remote hosts for debian deployment based on selected package manager (dpkg or apt)"
@@ -93,6 +94,7 @@ Capistrano::Configuration.instance.load do
   			copy_cmd = DebDeploy::Rsync.command(
   				debian_source,
   				DebDeploy::Rsync.remote_address(target.user || fetch(:user, ENV['USER']), target.host, debian_target),
+          :filter => ['*/'] + debian_filter,
   				:ssh => { 
   					:keys => ssh_options[:keys], 
   					:config => ssh_options[:config], 

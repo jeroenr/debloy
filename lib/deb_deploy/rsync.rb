@@ -4,7 +4,8 @@ module DebDeploy
       def command(from, to, options={})
         flags = ['-az']
         flags << '--delete'
-        flags << includes(["*/","*.deb"])
+        flags << '--delete-excluded'
+        flags << includes(options[:filter])
         flags << excludes(["*"])
         flags << ssh_options(options[:ssh]) if options.has_key?(:ssh)
 
