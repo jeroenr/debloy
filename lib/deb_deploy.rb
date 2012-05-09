@@ -1,6 +1,7 @@
 require 'deb_deploy/rsync'
 require 'deb_deploy/logger/batch'
 require 'deb_deploy/logger/stream'
+require 'deb_deploy/util/parallel_enumerable'
 
 Capistrano::Configuration.instance.load do
   namespace :deb do
@@ -8,6 +9,7 @@ Capistrano::Configuration.instance.load do
   	set :debian_target, '/tmp/deb_deploy'
   	set :debian_package_manager, 'dpkg'
   	set :debian_stream_log, false
+    set :debian_filter, ['*']
 
     namespace :bootstrap do
       desc "prepares remote hosts for debian deployment based on selected package manager (dpkg or apt)"
@@ -39,21 +41,58 @@ Capistrano::Configuration.instance.load do
 
         logger.debug "Dependencies installed"
 
-        run "echo 'deb file:#{debian_target} ./' > #{debian_target}/deb_deploy.list"
+        put "deb file:#{debian_target} ./", "#{debian_target}/deb_deploy.list"
         sudo "mv #{debian_target}/deb_deploy.list /etc/apt/sources.list.d/deb_deploy.list"
+
+        put "Package: *\nPin: origin\nPin-Priority: 900\n", "#{debian_target}/00debdeploy"
+        sudo "mv #{debian_target}/00debdeploy /etc/apt/preferences.d/00debdeploy"
+
+        run "cd #{debian_target} && apt-ftparchive packages .  | gzip -9c > Packages.gz"
 
         logger.debug "Set up local debian repository"
       end
       
     end
 
+    namespace :teardown do
+      desc "cleans up deb_deploy files from remote hosts based on selected package manager (dpkg or apt)"
+      task :default do
+        case debian_package_manager
+          when "dpkg"
+            dpkg
+          when "apt"
+            apt
+          else
+            raise "#{debian_package_manager} is an unsupported package manager. Only dpkg and apt are supported"
+        end
+      end
+     
+      desc "cleans up deb_deploy directory (#{debian_target})"
+      task :dpkg do
+        run "rm -rf #{debian_target}"
+        logger.debug "Removed deployment directory"
+      end
+
+      desc "cleans up deb_deploy directory (#{debian_target}) and local debian repository from remote hosts"
+      task :apt do
+        run "rm -rf #{debian_target}"
+
+        sudo "rm /etc/apt/sources.list.d/deb_deploy.list"
+
+        sudo "rm /etc/apt/preferences.d/00debdeploy"
+
+        logger.debug "Removed local debian repository and deployment directory"
+      end
+    end
+
   	desc "copies debian packages to the server"
   	task :copy_packages do
   		targets = find_servers_for_task(current_task)
-  		failed_targets = targets.map do |target|
+  		failed_targets = targets.async.map do |target|
   			copy_cmd = DebDeploy::Rsync.command(
   				debian_source,
   				DebDeploy::Rsync.remote_address(target.user || fetch(:user, ENV['USER']), target.host, debian_target),
+          :filter => ['*/'] + debian_filter.map {|x| "#{x}.deb"},
   				:ssh => { 
   					:keys => ssh_options[:keys], 
   					:config => ssh_options[:config], 
