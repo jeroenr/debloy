@@ -12,9 +12,13 @@ or with Bundler
 
 ### Tasks
 
+    cap deb:bootstrap
+
+This sets up the environment for dpkg or apt deployment, depending on your configuration.
+
     cap deb:deploy
 
-This deploys the debian packages and does a simple apt-get install of on the target servers.
+This deploys the debian packages on the target servers.
 
 ### Configuration
 
