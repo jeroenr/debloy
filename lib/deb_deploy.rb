@@ -39,8 +39,11 @@ Capistrano::Configuration.instance.load do
 
         logger.debug "Dependencies installed"
 
-        run "echo 'deb file:#{debian_target} ./' > #{debian_target}/deb_deploy.list"
+        put "deb file:#{debian_target} ./", "#{debian_target}/deb_deploy.list"
         sudo "mv #{debian_target}/deb_deploy.list /etc/apt/sources.list.d/deb_deploy.list"
+
+        put "Package: *\nPin: origin\nPin-Priority: 900\n", "#{debian_target}/00debdeploy"
+        sudo "mv #{debian_target}/00debdeploy /etc/apt/preferences.d/00debdeploy"
 
         logger.debug "Set up local debian repository"
       end
