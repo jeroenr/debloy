@@ -45,6 +45,8 @@ Capistrano::Configuration.instance.load do
         put "Package: *\nPin: origin\nPin-Priority: 900\n", "#{debian_target}/00debdeploy"
         sudo "mv #{debian_target}/00debdeploy /etc/apt/preferences.d/00debdeploy"
 
+        run "cd #{debian_target} && apt-ftparchive packages .  | gzip -9c > Packages.gz"
+
         logger.debug "Set up local debian repository"
       end
       
