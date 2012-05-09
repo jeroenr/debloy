@@ -65,13 +65,13 @@ Capistrano::Configuration.instance.load do
         end
       end
      
-      desc "cleans up deb_deploy directory"
+      desc "cleans up deb_deploy directory (#{debian_target})"
       task :dpkg do
         run "rm -rf #{debian_target}"
         logger.debug "Removed deployment directory"
       end
 
-      desc "cleans up deb_deploy directory and local debian repository from remote hosts"
+      desc "cleans up deb_deploy directory (#{debian_target}) and local debian repository from remote hosts"
       task :apt do
         run "rm -rf #{debian_target}"
 
