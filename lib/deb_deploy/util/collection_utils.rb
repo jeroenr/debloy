@@ -1,5 +1,5 @@
 module DebDeploy
-  module AsynchronousCollection
+  module LazyEnumerable
     def each(&block)
       threads = []
       super do |item|

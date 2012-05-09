@@ -3,8 +3,6 @@ require 'deb_deploy/logger/batch'
 require 'deb_deploy/logger/stream'
 require 'deb_deploy/util/parallel_enumerable'
 
-Enumerable.retroactively_include CoreExt::Enumerable::Parallellization
-
 Capistrano::Configuration.instance.load do
   namespace :deb do
   	set :debian_source, '.'

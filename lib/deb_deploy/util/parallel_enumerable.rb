@@ -1,12 +1,8 @@
 require 'deb_deploy/util/collection_utils'
 
-module CoreExt
-	module Enumerable
-		module Parallellization
-			def async
-				self.clone.extend DebDeploy:AsynchronousCollection
-			end
-		end
+module Enumerable
+	def async
+		self.clone.extend DebDeploy::LazyEnumerable
 	end
 end
-Enumerable.send :retroactively_include, CoreExt::Enumerable::Parallellization
+	
