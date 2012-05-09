@@ -1,6 +1,9 @@
 require 'deb_deploy/rsync'
 require 'deb_deploy/logger/batch'
 require 'deb_deploy/logger/stream'
+require 'deb_deploy/util/parallel_enumerable'
+
+Enumerable.retroactively_include CoreExt::Enumerable::Parallellization
 
 Capistrano::Configuration.instance.load do
   namespace :deb do
@@ -86,7 +89,7 @@ Capistrano::Configuration.instance.load do
   	desc "copies debian packages to the server"
   	task :copy_packages do
   		targets = find_servers_for_task(current_task)
-  		failed_targets = targets.map do |target|
+  		failed_targets = targets.async.map do |target|
   			copy_cmd = DebDeploy::Rsync.command(
   				debian_source,
   				DebDeploy::Rsync.remote_address(target.user || fetch(:user, ENV['USER']), target.host, debian_target),
