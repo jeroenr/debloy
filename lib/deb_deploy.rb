@@ -52,6 +52,37 @@ Capistrano::Configuration.instance.load do
       
     end
 
+    namespace :teardown do
+      desc "cleans up deb_deploy files from remote hosts based on selected package manager (dpkg or apt)"
+      task :default do
+        case debian_package_manager
+          when "dpkg"
+            dpkg
+          when "apt"
+            apt
+          else
+            raise "#{debian_package_manager} is an unsupported package manager. Only dpkg and apt are supported"
+        end
+      end
+     
+      desc "cleans up deb_deploy directory"
+      task :dpkg do
+        run "rm -rf #{debian_target}"
+        logger.debug "Removed deployment directory"
+      end
+
+      desc "cleans up deb_deploy directory and local debian repository from remote hosts"
+      task :apt do
+        run "rm -rf #{debian_target}"
+
+        sudo "rm /etc/apt/sources.list.d/deb_deploy.list"
+
+        sudo "rm /etc/apt/preferences.d/00debdeploy"
+
+        logger.debug "Removed local debian repository and deployment directory"
+      end
+    end
+
   	desc "copies debian packages to the server"
   	task :copy_packages do
   		targets = find_servers_for_task(current_task)
