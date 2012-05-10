@@ -4,6 +4,7 @@ module DebDeploy
       def command(from, to, options={})
         flags = ['-az']
         flags << '--delete'
+        flags << '--prune-empty-dirs'
         flags << '--delete-excluded'
         flags << includes(options[:filter])
         flags << excludes(["*"])
