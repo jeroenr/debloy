@@ -47,10 +47,8 @@ Capistrano::Configuration.instance.load do
         logger.debug "Dependencies installed"
 
         put "deb file:#{debian_target} ./", "#{debian_target}/deb_deploy.list"
-        sudo "mv #{debian_target}/deb_deploy.list /etc/apt/sources.list.d/deb_deploy.list"
 
         put "Package: *\nPin: origin\nPin-Priority: 900\n", "#{debian_target}/00debdeploy"
-        sudo "mv #{debian_target}/00debdeploy /etc/apt/preferences.d/00debdeploy"
 
         run "cd #{debian_target} && apt-ftparchive packages .  | gzip -9c > Packages.gz"
 
@@ -138,11 +136,11 @@ Capistrano::Configuration.instance.load do
 
             run "cd #{debian_target} && apt-ftparchive " << release_file_options.map{|k,v| "-o APT::FTPArchive::Release::#{k}='#{v}'"}.join(' ') << " release . > Release"
 
-            sudo "apt-get update"
+            sudo "apt-get -o Dir::Etc::SourceList=#{debian_target}/deb_deploy.list -o Dir::Etc::Preferences=#{debian_target}/00debdeploy update"
 
             list_packages_cmd = "zcat #{debian_target}/Packages.gz | grep Package | cut -d ' ' -f2 | sed ':a;N;$!ba;s/\n/ /g'"
             
-            run "#{list_packages_cmd} | xargs #{sudo} apt-get -y --allow-unauthenticated install" do |channel, stream, data|
+            run "#{list_packages_cmd} | xargs #{sudo} apt-get -y --allow-unauthenticated -o Dir::Etc::SourceList=#{debian_target}/deb_deploy.list -o Dir::Etc::Preferences=#{debian_target}/00debdeploy install" do |channel, stream, data|
               log.collect(channel[:host], data)
             end
           else
