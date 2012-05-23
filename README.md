@@ -1,3 +1,5 @@
+[![endorse](http://api.coderwall.com/jeroenr/endorsecount.png)](http://coderwall.com/jeroenr)
+
 # deb_deploy
 
 deb_deploy is a capistrano plugin to facilitate the deployment of debian packages (inspired by supply_drop). It works by simply copying (using rsync, or scp) your debian packages to your servers and installing them through the package manager
