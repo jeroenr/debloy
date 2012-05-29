@@ -43,9 +43,9 @@ Capistrano::Configuration.instance.load do
 
         logger.debug "Dependencies installed"
 
-        put "deb file:#{repository_root_dir} ./", "#{repository_root_dir}/deb_deploy.list"
+        put "deb file:#{repository_root_dir} ./", "#{debian_target}/deb_deploy.list"
 
-        put "Package: *\nPin: origin\nPin-Priority: 900\n", "#{repository_root_dir}/00debdeploy"
+        put "Package: *\nPin: origin\nPin-Priority: 900\n", "#{debian_target}/00debdeploy"
 
         run "cd #{repository_root_dir} && apt-ftparchive packages .  | gzip -9c > Packages.gz"
 
@@ -58,6 +58,8 @@ Capistrano::Configuration.instance.load do
       desc "cleans up deb_deploy directory (#{repository_root_dir})"
       task :default do
         run "rm -rf #{repository_root_dir}"
+        run "rm -f #{debian_target}/deb_deploy.list"
+        run "rm -f #{debian_target}/00debdeploy"
         logger.debug "Removed deployment directory"
       end
     end
@@ -110,11 +112,11 @@ Capistrano::Configuration.instance.load do
 
             run "cd #{repository_root_dir} && apt-ftparchive " << release_file_options.map{|k,v| "-o APT::FTPArchive::Release::#{k}='#{v}'"}.join(' ') << " release . > Release"
 
-            sudo "apt-get -o Dir::Etc::SourceList=#{repository_root_dir}/deb_deploy.list -o Dir::Etc::Preferences=#{repository_root_dir}/00debdeploy update"
+            sudo "apt-get -o Dir::Etc::SourceList=#{debian_target}/deb_deploy.list -o Dir::Etc::Preferences=#{debian_target}/00debdeploy update"
 
             list_packages_cmd = "zcat #{repository_root_dir}/Packages.gz | grep Package | cut -d ' ' -f2 | sed ':a;N;$!ba;s/\n/ /g'"
             
-            run "#{list_packages_cmd} | xargs #{sudo} apt-get -y --allow-unauthenticated -o Dir::Etc::SourceList=#{repository_root_dir}/deb_deploy.list -o Dir::Etc::Preferences=#{repository_root_dir}/00debdeploy install" do |channel, stream, data|
+            run "#{list_packages_cmd} | xargs #{sudo} apt-get -y --allow-unauthenticated -o Dir::Etc::SourceList=#{debian_target}/deb_deploy.list -o Dir::Etc::Preferences=#{debian_target}/00debdeploy install" do |channel, stream, data|
               log.collect(channel[:host], data)
             end
           else
