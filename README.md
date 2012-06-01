@@ -39,7 +39,7 @@ then optionally set some variables
 
 the directory containing your debian packages that will be rsynced to the servers.
 
-  	set :debian_target, '/tmp/deb_deploy'
+  	set :debian_target, '/tmp'
 
 the temp directory on the target machine to hold the packages before installing.
 
