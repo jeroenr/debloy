@@ -1,4 +1,6 @@
 require 'deb_deploy/rsync'
+require 'deb_deploy/apt_get'
+require 'deb_deploy/apt_ftp_archive'
 require 'deb_deploy/logger/batch'
 require 'deb_deploy/logger/stream'
 require 'deb_deploy/util/parallel_enumerable'
@@ -6,10 +8,19 @@ require 'deb_deploy/util/parallel_enumerable'
 Capistrano::Configuration.instance.load do
   namespace :deb do
   	set :debian_source, '.'
-  	set :debian_target, '/tmp/deb_deploy'
+  	set :debian_target, '/tmp'
   	set :debian_package_manager, 'dpkg'
   	set :debian_stream_log, false
     set :debian_filter, '*'
+
+    RELEASE_FILE_OPTIONS = {
+              "Codename" => "deb_deploy", 
+              "Components" => "deb_deploy", 
+              "Origin" => "deb_deploy", 
+              "Label" => "Deployed with deb_deploy", 
+              "Architectures" => "all", 
+              "Suite" => "stable"
+            }
 
     namespace :bootstrap do
       desc "prepares remote hosts for debian deployment based on selected package manager (dpkg or apt)"
@@ -26,28 +37,26 @@ Capistrano::Configuration.instance.load do
      
       desc "creates directories and installs dependencies"
       task :dpkg do
-        run "mkdir -p #{debian_target}"
-        sudo "apt-get update"
-        sudo "apt-get install -y rsync"
+        run "mkdir -p #{debian_target}/deb_deploy"
+        sudo DebDeploy::AptGet.update_cache
+        sudo DebDeploy::AptGet.install_packages(%w(rsync))
         logger.debug "Dependencies installed"
       end
 
       desc "creates local debian repository for apt-get"
       task :apt do
-        run "mkdir -p #{debian_target}"
+        run "mkdir -p #{debian_target}/deb_deploy"
 
-        sudo "apt-get update"
-        sudo "apt-get install -y rsync dpkg-dev gzip"
+        sudo DebDeploy::AptGet.update_cache
+        sudo DebDeploy::AptGet.install_packages(%w(rsync dpkg-dev gzip))
 
         logger.debug "Dependencies installed"
 
-        put "deb file:#{debian_target} ./", "#{debian_target}/deb_deploy.list"
-        sudo "mv #{debian_target}/deb_deploy.list /etc/apt/sources.list.d/deb_deploy.list"
+        put "deb file:#{debian_target}/deb_deploy ./", "#{debian_target}/deb_deploy.list"
 
         put "Package: *\nPin: origin\nPin-Priority: 900\n", "#{debian_target}/00debdeploy"
-        sudo "mv #{debian_target}/00debdeploy /etc/apt/preferences.d/00debdeploy"
 
-        run "cd #{debian_target} && apt-ftparchive packages .  | gzip -9c > Packages.gz"
+        run "cd #{debian_target}/deb_deploy && " << DebDeploy::AptFtpArchive.create_packages_file('.')
 
         logger.debug "Set up local debian repository"
       end
@@ -55,33 +64,15 @@ Capistrano::Configuration.instance.load do
     end
 
     namespace :teardown do
-      desc "cleans up deb_deploy files from remote hosts based on selected package manager (dpkg or apt)"
+      desc "cleans up deb_deploy files"
       task :default do
-        case debian_package_manager
-          when "dpkg"
-            dpkg
-          when "apt"
-            apt
-          else
-            raise "#{debian_package_manager} is an unsupported package manager. Only dpkg and apt are supported"
+        sudo "rm -rf #{debian_target}/deb_deploy"
+
+        deb_deploy_files = %w(/etc/apt/sources.list.d/deb_deploy.list /etc/apt/preferences.d/00debdeploy) << "#{debian_target}/deb_deploy.list" << "#{debian_target}/00debdeploy"
+        deb_deploy_files.each do |file_name|
+          sudo "rm -f #{file_name}"
         end
-      end
-     
-      desc "cleans up deb_deploy directory (#{debian_target})"
-      task :dpkg do
-        run "rm -rf #{debian_target}"
         logger.debug "Removed deployment directory"
-      end
-
-      desc "cleans up deb_deploy directory (#{debian_target}) and local debian repository from remote hosts"
-      task :apt do
-        run "rm -rf #{debian_target}"
-
-        sudo "rm /etc/apt/sources.list.d/deb_deploy.list"
-
-        sudo "rm /etc/apt/preferences.d/00debdeploy"
-
-        logger.debug "Removed local debian repository and deployment directory"
       end
     end
 
@@ -91,7 +82,7 @@ Capistrano::Configuration.instance.load do
   		failed_targets = targets.async.map do |target|
   			copy_cmd = DebDeploy::Rsync.command(
   				debian_source,
-  				DebDeploy::Rsync.remote_address(target.user || fetch(:user, ENV['USER']), target.host, debian_target),
+  				DebDeploy::Rsync.remote_address(target.user || fetch(:user, ENV['USER']), target.host, "#{debian_target}/deb_deploy"),
           :filter => ['*/'] + debian_filter.split(',').map {|x| "#{x}.deb"},
   				:ssh => { 
   					:keys => ssh_options[:keys], 
@@ -116,28 +107,23 @@ Capistrano::Configuration.instance.load do
 	    begin
         case debian_package_manager
           when "dpkg"
-    	      sudo "dpkg -R -i #{debian_target}" do |channel, stream, data|
+    	      sudo "dpkg -R -i #{debian_target}/deb_deploy" do |channel, stream, data|
     	        log.collect(channel[:host], data)
     	      end
           when "apt"
-            run "cd #{debian_target} && apt-ftparchive packages .  | gzip -9c > Packages.gz"
-
-            release_file_options = {
-              "Codename" => "deb_deploy", 
-              "Components" => "deb_deploy", 
-              "Origin" => "deb_deploy", 
-              "Label" => "Deployed with deb_deploy", 
-              "Architectures" => "all", 
-              "Suite" => "stable"
+            apt_get_options = {
+              "Dir::Etc::SourceList" => "#{debian_target}/deb_deploy.list",
+              "Dir::Etc::Preferences" => "#{debian_target}/00debdeploy"
             }
 
-            run "cd #{debian_target} && apt-ftparchive " << release_file_options.map{|k,v| "-o APT::FTPArchive::Release::#{k}='#{v}'"}.join(' ') << " release . > Release"
+            list_packages_cmd = "zcat #{debian_target}/deb_deploy/Packages.gz | grep Package | cut -d ' ' -f2 | sed ':a;N;$!ba;s/\n/ /g'"
 
-            sudo "apt-get update"
+            run "cd #{debian_target}/deb_deploy && " << DebDeploy::AptFtpArchive.create_packages_file('.')
+            run "cd #{debian_target}/deb_deploy && " << DebDeploy::AptFtpArchive.create_release_file('.', Hash[RELEASE_FILE_OPTIONS.map {|k,v| ["APT::FTPArchive::Release::#{k}",v]}])
 
-            list_packages_cmd = "zcat #{debian_target}/Packages.gz | grep Package | cut -d ' ' -f2 | sed ':a;N;$!ba;s/\n/ /g'"
-            
-            run "#{list_packages_cmd} | xargs #{sudo} apt-get -y --allow-unauthenticated install" do |channel, stream, data|
+            sudo DebDeploy::AptGet.update_cache(apt_get_options)
+
+            run "#{list_packages_cmd} | xargs #{sudo} #{DebDeploy::AptGet.install_packages([],apt_get_options)}" do |channel, stream, data|
               log.collect(channel[:host], data)
             end
           else
