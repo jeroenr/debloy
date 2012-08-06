@@ -1,4 +1,4 @@
-module DebDeploy
+module Debloy
   class Scp
     class << self
       def command(from, to, options={})

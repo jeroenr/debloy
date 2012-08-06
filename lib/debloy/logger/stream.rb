@@ -1,4 +1,4 @@
-module DebDeploy
+module Debloy
   module Logger
     class Stream
       def initialize(logger)

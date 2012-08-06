@@ -1,4 +1,4 @@
-module DebDeploy
+module Debloy
   module LazyEnumerable
     def each(&block)
       threads = []

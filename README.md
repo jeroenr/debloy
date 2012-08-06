@@ -1,28 +1,28 @@
 [![endorse](http://api.coderwall.com/jeroenr/endorsecount.png)](http://coderwall.com/jeroenr)
 
-# deb_deploy
+# debloy
 
-deb_deploy is a capistrano plugin to facilitate the deployment of debian packages (inspired by supply_drop). It works by simply copying (using rsync, or scp) your debian packages to your servers and installing them through the package manager
+debloy is a capistrano plugin to facilitate the deployment of debian packages (inspired by supply_drop). It works by simply copying (using rsync, or scp) your debian packages to your servers and installing them through the package manager
 
 ### Installation
 
-    gem install deb_deploy
+    gem install debloy
 
 or with Bundler
 
-    gem 'deb_deploy'
+    gem 'debloy'
 
 ### Tasks
 
-    cap deb:bootstrap
+    cap debloy:bootstrap
 
 This sets up the environment for dpkg or apt deployment, depending on your configuration.
 
-    cap deb:deploy
+    cap debloy
 
 This deploys the debian packages on the target servers.
 
-    cap deb:teardown
+    cap debloy:teardown
 
 Cleans up the environment.
 
@@ -31,7 +31,7 @@ Cleans up the environment.
 At the top of your deploy.rb
 
     require 'rubygems'
-    require 'deb_deploy'
+    require 'debloy'
 
 then optionally set some variables
 
