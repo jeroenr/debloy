@@ -1,4 +1,4 @@
-module DebDeploy
+module Debloy
   class AptFtpArchive
     class << self
       def command(arguments, options={})
@@ -11,10 +11,10 @@ module DebDeploy
 
       def create_release_file(from, options={})
         release_file_options = {
-              "Codename" => "deb_deploy", 
-              "Components" => "deb_deploy", 
-              "Origin" => "deb_deploy", 
-              "Label" => "Deployed with deb_deploy", 
+              "Codename" => "debloy",
+              "Components" => "debloy",
+              "Origin" => "debloy",
+              "Label" => "Debloyed",
               "Architectures" => "all", 
               "Suite" => "stable"
             }

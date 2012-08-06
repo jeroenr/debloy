@@ -1,4 +1,4 @@
-module DebDeploy
+module Debloy
   class Rsync
     class << self
       def command(from, to, options={})

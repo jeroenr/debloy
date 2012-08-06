@@ -1,4 +1,4 @@
-module DebDeploy
+module Debloy
   class AptGet
     class << self
       def command(arguments, options={})

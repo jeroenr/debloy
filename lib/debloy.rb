@@ -1,12 +1,12 @@
-require 'deb_deploy/rsync'
-require 'deb_deploy/apt_get'
-require 'deb_deploy/apt_ftp_archive'
-require 'deb_deploy/logger/batch'
-require 'deb_deploy/logger/stream'
-require 'deb_deploy/util/parallel_enumerable'
+require 'debloy/rsync'
+require 'debloy/apt_get'
+require 'debloy/apt_ftp_archive'
+require 'debloy/logger/batch'
+require 'debloy/logger/stream'
+require 'debloy/util/parallel_enumerable'
 
 Capistrano::Configuration.instance.load do
-  namespace :deb do
+  namespace :debloy do
   	set :debian_source, '.'
   	set :debian_target, '/tmp'
   	set :debian_package_manager, 'dpkg'
@@ -14,16 +14,16 @@ Capistrano::Configuration.instance.load do
     set :debian_filter, '*'
 
     RELEASE_FILE_OPTIONS = {
-              "Codename" => "deb_deploy", 
-              "Components" => "deb_deploy", 
-              "Origin" => "deb_deploy", 
-              "Label" => "Deployed with deb_deploy", 
+              "Codename" => "debloy",
+              "Components" => "debloy",
+              "Origin" => "debloy",
+              "Label" => "Debloyed",
               "Architectures" => "all", 
               "Suite" => "stable"
             }
 
     namespace :bootstrap do
-      desc "prepares remote hosts for debian deployment based on selected package manager (dpkg or apt)"
+      desc "prepares remote hosts for debloyment based on selected package manager (dpkg or apt)"
       task :default do
         case debian_package_manager
           when "dpkg"
@@ -37,24 +37,24 @@ Capistrano::Configuration.instance.load do
      
       desc "creates directories and installs dependencies"
       task :dpkg do
-        run "mkdir -p #{debian_target}/deb_deploy"
-        sudo DebDeploy::AptGet.update_cache
-        sudo DebDeploy::AptGet.install_packages(%w(rsync))
+        run "mkdir -p #{debian_target}/debloy"
+        sudo Debloy::AptGet.update_cache
+        sudo Debloy::AptGet.install_packages(%w(rsync))
         logger.debug "Dependencies installed"
       end
 
       desc "creates local debian repository for apt-get"
       task :apt do
-        run "mkdir -p #{debian_target}/deb_deploy"
+        run "mkdir -p #{debian_target}/debloy"
 
-        sudo DebDeploy::AptGet.update_cache
-        sudo DebDeploy::AptGet.install_packages(%w(rsync dpkg-dev gzip))
+        sudo Debloy::AptGet.update_cache
+        sudo Debloy::AptGet.install_packages(%w(rsync dpkg-dev gzip))
 
         logger.debug "Dependencies installed"
 
-        put "deb file:#{debian_target}/deb_deploy ./", "#{debian_target}/deb_deploy.list"
+        put "deb file:#{debian_target}/debloy ./", "#{debian_target}/debloy.list"
 
-        run "cd #{debian_target}/deb_deploy && " << DebDeploy::AptFtpArchive.create_packages_file('.')
+        run "cd #{debian_target}/debloy && " << Debloy::AptFtpArchive.create_packages_file('.')
 
         logger.debug "Set up local debian repository"
       end
@@ -62,12 +62,12 @@ Capistrano::Configuration.instance.load do
     end
 
     namespace :teardown do
-      desc "cleans up deb_deploy files"
+      desc "cleans up debloy files"
       task :default do
-        sudo "rm -rf #{debian_target}/deb_deploy"
+        sudo "rm -rf #{debian_target}/debloy"
 
-        deb_deploy_files = %w(/etc/apt/sources.list.d/deb_deploy.list /etc/apt/preferences.d/00debdeploy) << "#{debian_target}/deb_deploy.list" << "#{debian_target}/00debdeploy"
-        deb_deploy_files.each do |file_name|
+        debloy_files = %w(/etc/apt/sources.list.d/debloy.list /etc/apt/preferences.d/00debloy) << "#{debian_target}/debloy.list" << "#{debian_target}/00debloy"
+        debloy_files.each do |file_name|
           sudo "rm -f #{file_name}"
         end
         logger.debug "Removed deployment directory"
@@ -78,9 +78,9 @@ Capistrano::Configuration.instance.load do
   	task :copy_packages do
   		targets = find_servers_for_task(current_task)
   		failed_targets = targets.async.map do |target|
-  			copy_cmd = DebDeploy::Rsync.command(
+  			copy_cmd = Debloy::Rsync.command(
   				debian_source,
-  				DebDeploy::Rsync.remote_address(target.user || fetch(:user, ENV['USER']), target.host, "#{debian_target}/deb_deploy"),
+  				Debloy::Rsync.remote_address(target.user || fetch(:user, ENV['USER']), target.host, "#{debian_target}/debloy"),
           :filter => ['*/'] + debian_filter.split(',').map {|x| "#{x}.deb"},
   				:ssh => { 
   					:keys => ssh_options[:keys], 
@@ -97,30 +97,30 @@ Capistrano::Configuration.instance.load do
 
     task :install_packages do
     	log = if debian_stream_log 
-		      DebDeploy::Logger::Stream.new(logger) 
+		      Debloy::Logger::Stream.new(logger)
 	      else 
-		      DebDeploy::Logger::Batch.new(logger) 
+		      Debloy::Logger::Batch.new(logger)
 	      end
 
 	    begin
         case debian_package_manager
           when "dpkg"
-    	      sudo "dpkg -R -i #{debian_target}/deb_deploy" do |channel, stream, data|
+    	      sudo "dpkg -R -i #{debian_target}/debloy" do |channel, stream, data|
     	        log.collect(channel[:host], data)
     	      end
           when "apt"
             apt_get_options = {
-              "Dir::Etc::SourceList" => "#{debian_target}/deb_deploy.list"
+              "Dir::Etc::SourceList" => "#{debian_target}/debloy.list"
             }
 
-            list_packages_cmd = "zcat #{debian_target}/deb_deploy/Packages.gz | grep Package | cut -d ' ' -f2 | sed ':a;N;$!ba;s/\n/ /g'"
+            list_packages_cmd = "zcat #{debian_target}/debloy/Packages.gz | grep Package | cut -d ' ' -f2 | sed ':a;N;$!ba;s/\n/ /g'"
 
-            run "cd #{debian_target}/deb_deploy && " << DebDeploy::AptFtpArchive.create_packages_file('.')
-            run "cd #{debian_target}/deb_deploy && " << DebDeploy::AptFtpArchive.create_release_file('.', Hash[RELEASE_FILE_OPTIONS.map {|k,v| ["APT::FTPArchive::Release::#{k}",v]}])
+            run "cd #{debian_target}/debloy && " << Debloy::AptFtpArchive.create_packages_file('.')
+            run "cd #{debian_target}/debloy && " << Debloy::AptFtpArchive.create_release_file('.', Hash[RELEASE_FILE_OPTIONS.map {|k,v| ["APT::FTPArchive::Release::#{k}",v]}])
 
-            sudo DebDeploy::AptGet.update_cache(apt_get_options)
+            sudo Debloy::AptGet.update_cache(apt_get_options)
 
-            run "#{list_packages_cmd} | xargs #{sudo} #{DebDeploy::AptGet.install_packages([],apt_get_options)}" do |channel, stream, data|
+            run "#{list_packages_cmd} | xargs #{sudo} #{Debloy::AptGet.install_packages([],apt_get_options)}" do |channel, stream, data|
               log.collect(channel[:host], data)
             end
           else
@@ -134,7 +134,7 @@ Capistrano::Configuration.instance.load do
     end
 
   	desc "copies and installs debian packages to the server"
-  	task :deploy do
+  	task :default do
   		copy_packages
   		install_packages
   	end
