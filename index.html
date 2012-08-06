@@ -1,0 +1,113 @@
+<!DOCTYPE html>
+<html>
+
+  <head>
+    <meta charset='utf-8' />
+    <meta http-equiv="X-UA-Compatible" content="chrome=1" />
+    <meta name="description" content="Debloy : Capistrano plugin to facilitate the deployment of debian packages" />
+
+    <link rel="stylesheet" type="text/css" media="screen" href="stylesheets/stylesheet.css">
+
+    <title>Debloy</title>
+  </head>
+
+  <body>
+
+    <!-- HEADER -->
+    <div id="header_wrap" class="outer">
+        <header class="inner">
+          <a id="forkme_banner" href="https://github.com/jeroenr/debloy">View on GitHub</a>
+
+          <h1 id="project_title">Debloy</h1>
+          <h2 id="project_tagline">Capistrano plugin to facilitate the deployment of debian packages</h2>
+
+            <section id="downloads">
+              <a class="zip_download_link" href="https://github.com/jeroenr/debloy/zipball/master">Download this project as a .zip file</a>
+              <a class="tar_download_link" href="https://github.com/jeroenr/debloy/tarball/master">Download this project as a tar.gz file</a>
+            </section>
+        </header>
+    </div>
+
+    <!-- MAIN CONTENT -->
+    <div id="main_content_wrap" class="outer">
+      <section id="main_content" class="inner">
+        <h1>debloy</h1>
+
+<p>debloy is a capistrano plugin to facilitate the deployment of debian packages (inspired by supply_drop). It works by simply copying (using rsync, or scp) your debian packages to your servers and installing them through the package manager</p>
+
+<h3>Installation</h3>
+
+<pre><code>gem install debloy
+</code></pre>
+
+<p>or with Bundler</p>
+
+<pre><code>gem 'debloy'
+</code></pre>
+
+<h3>Tasks</h3>
+
+<pre><code>cap debloy:bootstrap
+</code></pre>
+
+<p>This sets up the environment for dpkg or apt deployment, depending on your configuration.</p>
+
+<pre><code>cap debloy
+</code></pre>
+
+<p>This deploys the debian packages on the target servers.</p>
+
+<pre><code>cap debloy:teardown
+</code></pre>
+
+<p>Cleans up the environment.</p>
+
+<h3>Configuration</h3>
+
+<p>At the top of your deploy.rb</p>
+
+<pre><code>require 'rubygems'
+require 'debloy'
+</code></pre>
+
+<p>then optionally set some variables</p>
+
+<pre><code>set :debian_source, '.'
+</code></pre>
+
+<p>the directory containing your debian packages that will be rsynced to the servers.</p>
+
+<pre><code>set :debian_target, '/tmp'
+</code></pre>
+
+<p>the temp directory on the target machine to hold the packages before installing.</p>
+
+<pre><code>set :debian_package_manager, 'dpkg'
+</code></pre>
+
+<p>the debian package manager to use (one of [dpkg, apt]).</p>
+
+<pre><code>set :debian_stream_log, false
+</code></pre>
+
+<p>determines whether to stream the command output.</p>
+
+<pre><code>set :debian_filter, '*'
+</code></pre>
+
+<p>a glob syntax filter to determine which packages to deploy. By default all will be deployed.</p>
+      </section>
+    </div>
+
+    <!-- FOOTER  -->
+    <div id="footer_wrap" class="outer">
+      <footer class="inner">
+        <p class="copyright">Debloy maintained by <a href="https://github.com/jeroenr">jeroenr</a></p>
+        <p>Published with <a href="http://pages.github.com">GitHub Pages</a></p>
+      </footer>
+    </div>
+
+    
+
+  </body>
+</html>
