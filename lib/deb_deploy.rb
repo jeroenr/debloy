@@ -54,8 +54,6 @@ Capistrano::Configuration.instance.load do
 
         put "deb file:#{debian_target}/deb_deploy ./", "#{debian_target}/deb_deploy.list"
 
-        put "Package: *\nPin: origin\nPin-Priority: 900\n", "#{debian_target}/00debdeploy"
-
         run "cd #{debian_target}/deb_deploy && " << DebDeploy::AptFtpArchive.create_packages_file('.')
 
         logger.debug "Set up local debian repository"
@@ -112,8 +110,7 @@ Capistrano::Configuration.instance.load do
     	      end
           when "apt"
             apt_get_options = {
-              "Dir::Etc::SourceList" => "#{debian_target}/deb_deploy.list",
-              "Dir::Etc::Preferences" => "#{debian_target}/00debdeploy"
+              "Dir::Etc::SourceList" => "#{debian_target}/deb_deploy.list"
             }
 
             list_packages_cmd = "zcat #{debian_target}/deb_deploy/Packages.gz | grep Package | cut -d ' ' -f2 | sed ':a;N;$!ba;s/\n/ /g'"
